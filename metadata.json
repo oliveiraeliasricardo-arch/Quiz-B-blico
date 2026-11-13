@@ -1,0 +1,6 @@
+{
+  "name": "Quiz Bíblico: De Gênesis ao Apocalipse",
+  "description": "App completo de Quiz Bíblico com banco de 1000 questões de Gênesis ao Apocalipse, 3 níveis de dificuldade, placar com ranking e explicações com versículos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

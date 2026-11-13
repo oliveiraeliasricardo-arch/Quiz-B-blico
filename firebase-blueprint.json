@@ -1,0 +1,222 @@
+{
+  "entities": {
+    "ScoreEntry": {
+      "title": "ScoreEntry",
+      "description": "Completed 20-question Bible quiz score entry on the shared online leaderboard.",
+      "type": "object",
+      "properties": {
+        "playerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Display name chosen by the player."
+        },
+        "playerAvatar": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "description": "Emoji emblem chosen by the player."
+        },
+        "score": {
+          "type": "integer",
+          "description": "Total points achieved in the 20-question round (0 to 3000)."
+        },
+        "correctAnswers": {
+          "type": "integer",
+          "description": "Number of correct answers out of 20 (0 to 20)."
+        },
+        "totalQuestions": {
+          "type": "integer",
+          "description": "Total questions in the round (always 20)."
+        },
+        "accuracy": {
+          "type": "integer",
+          "description": "Accuracy percentage (0 to 100)."
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["facil", "medio", "dificil", "misto"],
+          "description": "Selected difficulty level."
+        },
+        "timeSpentSeconds": {
+          "type": "integer",
+          "description": "Time spent completing the round in seconds (0 to 86400)."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Whether the score is visible on the shared online leaderboard (always true)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the score was recorded."
+        }
+      },
+      "required": [
+        "playerName",
+        "playerAvatar",
+        "score",
+        "correctAnswers",
+        "totalQuestions",
+        "accuracy",
+        "difficulty",
+        "timeSpentSeconds",
+        "isPublic",
+        "createdAt"
+      ]
+    },
+    "DuelRoom": {
+      "title": "DuelRoom",
+      "description": "Two-player simultaneous Bible quiz room sharing 20 identical questions.",
+      "type": "object",
+      "properties": {
+        "roomCode": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 6,
+          "pattern": "^[A-Z0-9]{6}$",
+          "description": "6-character uppercase room invite code."
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["facil", "medio", "dificil", "misto"],
+          "description": "Selected difficulty level for the 20 shared questions."
+        },
+        "questionIds": {
+          "type": "array",
+          "description": "Exact ordered list of 20 question IDs from the 1,000-question bank."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "playing", "finished"],
+          "description": "Current lifecycle state of the duel room."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the room was created."
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the second player joined and the duel began."
+        }
+      },
+      "required": [
+        "roomCode",
+        "difficulty",
+        "questionIds",
+        "status",
+        "createdAt"
+      ]
+    },
+    "DuelParticipant": {
+      "title": "DuelParticipant",
+      "description": "Real-time progress, accuracy, and response-time metrics for one player in a 2-player duel.",
+      "type": "object",
+      "properties": {
+        "duelId": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 6,
+          "pattern": "^[A-Z0-9]{6}$",
+          "description": "Parent duel room code."
+        },
+        "slot": {
+          "type": "string",
+          "enum": ["host", "guest"],
+          "description": "Player slot inside the duel room."
+        },
+        "playerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Display name of the player."
+        },
+        "playerAvatar": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "description": "Emoji emblem of the player."
+        },
+        "currentQuestionIndex": {
+          "type": "integer",
+          "description": "Current question index (0 to 20)."
+        },
+        "answeredCount": {
+          "type": "integer",
+          "description": "Number of answered questions so far (0 to 20)."
+        },
+        "correctAnswers": {
+          "type": "integer",
+          "description": "Number of correct answers so far (0 to 20)."
+        },
+        "score": {
+          "type": "integer",
+          "description": "Current duel score (0 to 3000)."
+        },
+        "totalTimeMs": {
+          "type": "integer",
+          "description": "Accumulated response time in milliseconds across answered questions."
+        },
+        "avgResponseMs": {
+          "type": "integer",
+          "description": "Average response time in milliseconds per answered question."
+        },
+        "answerTimesMs": {
+          "type": "array",
+          "description": "Per-question response times in milliseconds (up to 20 entries)."
+        },
+        "answersCorrect": {
+          "type": "array",
+          "description": "Per-question boolean correctness results (up to 20 entries)."
+        },
+        "finished": {
+          "type": "boolean",
+          "description": "Whether the player has completed all 20 questions."
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the player joined."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest progress update."
+        }
+      },
+      "required": [
+        "duelId",
+        "slot",
+        "playerName",
+        "playerAvatar",
+        "currentQuestionIndex",
+        "answeredCount",
+        "correctAnswers",
+        "score",
+        "totalTimeMs",
+        "avgResponseMs",
+        "answerTimesMs",
+        "answersCorrect",
+        "finished",
+        "joinedAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/scores/{scoreId}": {
+      "schema": "ScoreEntry",
+      "description": "Shared online leaderboard scores visible to all players."
+    },
+    "/duels/{duelId}": {
+      "schema": "DuelRoom",
+      "description": "Simultaneous 2-player Bible quiz duel rooms."
+    },
+    "/duels/{duelId}/participants/{slotId}": {
+      "schema": "DuelParticipant",
+      "description": "Host and guest real-time answer progress and response timings for a duel."
+    }
+  }
+}

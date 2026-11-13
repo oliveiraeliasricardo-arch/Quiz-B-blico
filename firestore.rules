@@ -1,0 +1,312 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Hardened Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidRoomCode(code) {
+      return code is string && code.size() == 6 && code.matches('^[A-Z0-9]{6}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email == 'oliveiraeliasricardo@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isValidScoreEntry(data) {
+      return data.keys().hasAll([
+          'playerName',
+          'playerAvatar',
+          'score',
+          'correctAnswers',
+          'totalQuestions',
+          'accuracy',
+          'difficulty',
+          'timeSpentSeconds',
+          'isPublic',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'playerName',
+          'playerAvatar',
+          'score',
+          'correctAnswers',
+          'totalQuestions',
+          'accuracy',
+          'difficulty',
+          'timeSpentSeconds',
+          'isPublic',
+          'createdAt'
+        ])
+        && data.playerName is string
+        && data.playerName.size() >= 1
+        && data.playerName.size() <= 32
+        && data.playerAvatar is string
+        && data.playerAvatar.size() >= 1
+        && data.playerAvatar.size() <= 16
+        && data.score is int
+        && data.score >= 0
+        && data.score <= 3000
+        && data.correctAnswers is int
+        && data.correctAnswers >= 0
+        && data.correctAnswers <= 20
+        && data.totalQuestions is int
+        && data.totalQuestions == 20
+        && data.accuracy is int
+        && data.accuracy >= 0
+        && data.accuracy <= 100
+        && data.difficulty is string
+        && data.difficulty.size() >= 4
+        && data.difficulty.size() <= 10
+        && data.difficulty in ['facil', 'medio', 'dificil', 'misto']
+        && data.timeSpentSeconds is int
+        && data.timeSpentSeconds >= 0
+        && data.timeSpentSeconds <= 86400
+        && data.isPublic is bool
+        && data.isPublic == true
+        && data.createdAt is timestamp;
+    }
+
+    function isValidDuel(data) {
+      return data.keys().hasAll([
+          'roomCode',
+          'difficulty',
+          'questionIds',
+          'status',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'roomCode',
+          'difficulty',
+          'questionIds',
+          'status',
+          'createdAt',
+          'startedAt'
+        ])
+        && isValidRoomCode(data.roomCode)
+        && data.difficulty is string
+        && data.difficulty.size() >= 4
+        && data.difficulty.size() <= 10
+        && data.difficulty in ['facil', 'medio', 'dificil', 'misto']
+        && data.questionIds is list
+        && data.questionIds.size() == 20
+        && data.questionIds[0] is int
+        && data.status is string
+        && data.status.size() >= 7
+        && data.status.size() <= 8
+        && data.status in ['waiting', 'playing', 'finished']
+        && data.createdAt is timestamp
+        && (!('startedAt' in data) || data.startedAt is timestamp);
+    }
+
+    function isValidParticipant(data) {
+      return data.keys().hasAll([
+          'duelId',
+          'slot',
+          'playerName',
+          'playerAvatar',
+          'currentQuestionIndex',
+          'answeredCount',
+          'correctAnswers',
+          'score',
+          'totalTimeMs',
+          'avgResponseMs',
+          'answerTimesMs',
+          'answersCorrect',
+          'finished',
+          'joinedAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'duelId',
+          'slot',
+          'playerName',
+          'playerAvatar',
+          'currentQuestionIndex',
+          'answeredCount',
+          'correctAnswers',
+          'score',
+          'totalTimeMs',
+          'avgResponseMs',
+          'answerTimesMs',
+          'answersCorrect',
+          'finished',
+          'joinedAt',
+          'updatedAt'
+        ])
+        && isValidRoomCode(data.duelId)
+        && data.slot is string
+        && data.slot.size() >= 4
+        && data.slot.size() <= 5
+        && data.slot in ['host', 'guest']
+        && data.playerName is string
+        && data.playerName.size() >= 1
+        && data.playerName.size() <= 32
+        && data.playerAvatar is string
+        && data.playerAvatar.size() >= 1
+        && data.playerAvatar.size() <= 16
+        && data.currentQuestionIndex is int
+        && data.currentQuestionIndex >= 0
+        && data.currentQuestionIndex <= 20
+        && data.answeredCount is int
+        && data.answeredCount >= 0
+        && data.answeredCount <= 20
+        && data.correctAnswers is int
+        && data.correctAnswers >= 0
+        && data.correctAnswers <= 20
+        && data.score is int
+        && data.score >= 0
+        && data.score <= 3000
+        && data.totalTimeMs is int
+        && data.totalTimeMs >= 0
+        && data.totalTimeMs <= 86400000
+        && data.avgResponseMs is int
+        && data.avgResponseMs >= 0
+        && data.avgResponseMs <= 86400000
+        && data.answerTimesMs is list
+        && data.answerTimesMs.size() <= 20
+        && (data.answerTimesMs.size() == 0 || data.answerTimesMs[0] is int)
+        && data.answersCorrect is list
+        && data.answersCorrect.size() <= 20
+        && (data.answersCorrect.size() == 0 || data.answersCorrect[0] is bool)
+        && data.finished is bool
+        && data.joinedAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Shared Online Leaderboard Collection
+    match /scores/{scoreId} {
+      allow get: if isValidId(scoreId) && (existing().isPublic == true || isAdmin());
+      allow list: if existing().isPublic == true || isAdmin();
+      allow create: if isValidId(scoreId)
+        && isValidScoreEntry(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(scoreId) && isAdmin();
+    }
+
+    // Simultaneous 2-Player Duel Rooms
+    match /duels/{duelId} {
+      allow get: if isValidId(duelId) && isValidRoomCode(duelId);
+      allow create: if isValidId(duelId)
+        && isValidRoomCode(duelId)
+        && isValidDuel(incoming())
+        && incoming().roomCode == duelId
+        && incoming().status == 'waiting'
+        && !('startedAt' in incoming())
+        && incoming().createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/duels/$(duelId)/participants/host);
+      allow update: if isValidId(duelId)
+        && isValidRoomCode(duelId)
+        && isValidDuel(incoming())
+        && existing().status != 'finished'
+        && incoming().roomCode == existing().roomCode
+        && incoming().difficulty == existing().difficulty
+        && incoming().questionIds == existing().questionIds
+        && incoming().createdAt == existing().createdAt
+        && (
+          // Action: Guest joins room and duel begins
+          (
+            existing().status == 'waiting'
+            && incoming().status == 'playing'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'startedAt'])
+            && incoming().startedAt == request.time
+            && existsAfter(/databases/$(database)/documents/duels/$(duelId)/participants/guest)
+          )
+          ||
+          // Action: Both players finished, mark room finished
+          (
+            existing().status == 'playing'
+            && incoming().status == 'finished'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+            && (!('startedAt' in existing()) || incoming().startedAt == existing().startedAt)
+            && getAfter(/databases/$(database)/documents/duels/$(duelId)/participants/host).data.finished == true
+            && getAfter(/databases/$(database)/documents/duels/$(duelId)/participants/guest).data.finished == true
+          )
+        );
+      allow delete: if isValidId(duelId) && isAdmin();
+
+      // Duel Participants (Host & Guest)
+      match /participants/{slotId} {
+        allow get: if isValidId(duelId)
+          && isValidId(slotId)
+          && slotId in ['host', 'guest']
+          && exists(/databases/$(database)/documents/duels/$(duelId));
+        allow create: if isValidId(duelId)
+          && isValidRoomCode(duelId)
+          && isValidId(slotId)
+          && slotId in ['host', 'guest']
+          && isValidParticipant(incoming())
+          && incoming().duelId == duelId
+          && incoming().slot == slotId
+          && incoming().currentQuestionIndex == 0
+          && incoming().answeredCount == 0
+          && incoming().correctAnswers == 0
+          && incoming().score == 0
+          && incoming().totalTimeMs == 0
+          && incoming().avgResponseMs == 0
+          && incoming().answerTimesMs.size() == 0
+          && incoming().answersCorrect.size() == 0
+          && incoming().finished == false
+          && incoming().joinedAt == request.time
+          && incoming().updatedAt == request.time
+          && (
+            (slotId == 'host' && existsAfter(/databases/$(database)/documents/duels/$(duelId)))
+            ||
+            (
+              slotId == 'guest'
+              && exists(/databases/$(database)/documents/duels/$(duelId))
+              && get(/databases/$(database)/documents/duels/$(duelId)).data.status == 'waiting'
+            )
+          );
+        allow update: if isValidId(duelId)
+          && isValidRoomCode(duelId)
+          && isValidId(slotId)
+          && slotId in ['host', 'guest']
+          && isValidParticipant(incoming())
+          && exists(/databases/$(database)/documents/duels/$(duelId))
+          && get(/databases/$(database)/documents/duels/$(duelId)).data.status != 'finished'
+          && existing().finished == false
+          && incoming().duelId == existing().duelId
+          && incoming().slot == existing().slot
+          && incoming().joinedAt == existing().joinedAt
+          && incoming().updatedAt == request.time
+          && incoming().answeredCount >= existing().answeredCount
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'currentQuestionIndex',
+            'answeredCount',
+            'correctAnswers',
+            'score',
+            'totalTimeMs',
+            'avgResponseMs',
+            'answerTimesMs',
+            'answersCorrect',
+            'finished',
+            'updatedAt'
+          ]);
+        allow delete: if isValidId(duelId) && isValidId(slotId) && isAdmin();
+      }
+    }
+  }
+}

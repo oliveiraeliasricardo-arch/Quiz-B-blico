@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/((?!assets/|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|registerSW\\.js|favicon\\.ico|icon\\.svg|apple-touch-icon\\.png|pwa-.*\\.png).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
